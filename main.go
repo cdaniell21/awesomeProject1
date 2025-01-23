@@ -19,8 +19,12 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 
 func PostHandler(w http.ResponseWriter, r *http.Request) {
 	body := requestBody{}
-	err := json.NewDecoder(r.Body).Decode(&body)
-	if err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "Неверный JSON формат", http.StatusBadRequest)
+		return
+	}
+
+	if body.Message == "" {
 		http.Error(w, "JSON должен содержать поле 'message'", http.StatusBadRequest)
 		return
 	}
