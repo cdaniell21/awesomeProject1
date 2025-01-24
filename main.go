@@ -2,38 +2,49 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/gorilla/mux"
 	"net/http"
 )
 
-var task string
+func GetMessages(w http.ResponseWriter, r *http.Request) {
+	var messages []Message
 
-type requestBody struct {
-	Message string `json:"message"`
+	if err := DB.Find(&messages).Error; err != nil {
+		http.Error(w, "Ошибка при получении записей", http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(messages)
 }
 
-func GetHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "hello, %s", task)
-}
+func CreateMessage(w http.ResponseWriter, r *http.Request) {
+	var message Message
 
-func PostHandler(w http.ResponseWriter, r *http.Request) {
-	body := requestBody{}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&message); err != nil {
 		http.Error(w, "Неверный JSON формат", http.StatusBadRequest)
 		return
 	}
 
-	if body.Message == "" {
-		http.Error(w, "JSON должен содержать поле 'message'", http.StatusBadRequest)
+	if message.Task == "" || message.IsDone == nil {
+		http.Error(w, "JSON должен содержать поля 'task' и 'is_done'", http.StatusBadRequest)
 		return
 	}
-	task = body.Message
+
+	if err := DB.Create(&message).Error; err != nil {
+		http.Error(w, "Ошибка при создании записи", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
 }
 
 func main() {
+	InitDB()
+
+	DB.AutoMigrate(&Message{})
+
 	router := mux.NewRouter()
-	router.HandleFunc("/api/hello", GetHandler).Methods("GET")
-	router.HandleFunc("/api/hello", PostHandler).Methods("POST")
+	router.HandleFunc("/api/messages", CreateMessage).Methods("POST")
+	router.HandleFunc("/api/messages", GetMessages).Methods("GET")
 	http.ListenAndServe(":8080", router)
 }
