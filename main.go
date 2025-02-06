@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/gorilla/mux"
 	"net/http"
 	"strconv"
@@ -109,11 +108,8 @@ func DeleteMessage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Запись не найдена", http.StatusNotFound)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
-		"message": fmt.Sprintf("Сообщение с id %d успешно удалено", id),
-	})
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func main() {
