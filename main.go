@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/mux"
 	"net/http"
 	"strconv"
@@ -45,6 +46,7 @@ func CreateMessage(w http.ResponseWriter, r *http.Request) {
 func UpdateMessage(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	idVars := vars["id"]
+
 	id, err := strconv.Atoi(idVars)
 	if err != nil {
 		http.Error(w, "Неверный формат id", http.StatusBadRequest)
@@ -86,6 +88,34 @@ func UpdateMessage(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(message)
 }
 
+func DeleteMessage(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	idVars := vars["id"]
+
+	id, err := strconv.Atoi(idVars)
+	if err != nil {
+		http.Error(w, "Неверный формат id", http.StatusBadRequest)
+		return
+	}
+
+	result := DB.Delete(&Message{}, id)
+
+	if result.Error != nil {
+		http.Error(w, "Ошибка при удалении записи", http.StatusInternalServerError)
+		return
+	}
+
+	if result.RowsAffected == 0 {
+		http.Error(w, "Запись не найдена", http.StatusNotFound)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": fmt.Sprintf("Сообщение с id %d успешно удалено", id),
+	})
+}
+
 func main() {
 	InitDB()
 
@@ -95,5 +125,6 @@ func main() {
 	router.HandleFunc("/api/messages", CreateMessage).Methods("POST")
 	router.HandleFunc("/api/messages", GetMessages).Methods("GET")
 	router.HandleFunc("/api/messages/{id}", UpdateMessage).Methods("PATCH")
+	router.HandleFunc("/api/messages/{id}", DeleteMessage).Methods("DELETE")
 	http.ListenAndServe(":8080", router)
 }
